@@ -1,14 +1,18 @@
-"""
+r"""
 Data Analysis Library
 
 Description:
 This is a data analysis tool for basic statistics data analysis. 
+
+Prerequisites:
+matplotlib; pandas; scipy
 
 Functionalities:
 * Histogram plot; Box plot
 * Descriptive statistics  
 * Statistical estimations and inferences
 * One-way ANOVA
+* Correlation analysis; Linear regression
 """
 
 import matplotlib.pyplot as plt
@@ -22,6 +26,17 @@ Z_ALPHA = {0.005:2.5758, 0.025:1.96, 0.05:1.6449, 0.01:2.3263, 0.05:1.64485, 0.1
 def histplot(data):
     """
     Histogram plot
+    
+    Input:
+    data: a list of numbers
+    
+    Output:
+    Histogram plot of the data
+    
+    Example:
+    import random
+    import statistics as s
+    s.histplot(random.random(1000))
     """
     bins = ceil(1 + log(len(data))/0.693)
     plt.hist(data, bins)
@@ -30,6 +45,17 @@ def histplot(data):
 def boxplot(data):
     """
     Box plot
+    
+    Input:
+    data: a list of numbers
+
+    Output:
+    Box plot of the data
+
+    Example:
+    import random
+    import statistics as s
+    s.boxplot(random.random(1000))
     """  
     plt.box(data)
     
@@ -51,6 +77,12 @@ def std(data):
     """
     return pd.Series(data).std()
 
+def corr(data1, data2):
+	"""
+	Correlation between two lists of data
+	"""
+	return pd.Series(data1).corr(pd.Series(data2))
+	
 def mean_est_std_known(data, alpha, std):
     """
     Confidence interval of the mean of single random variable
@@ -308,3 +340,54 @@ def oneway_anova(data, alpha):
     f = stat.f.ppf(1 - alpha, w - 1, num - w)
     if fstat < f: return True, fstat, f
     else: return False, fstat, f
+
+def is_corr(data1, data2, alpha):
+	"""
+	Descriptions:
+	Hypothesis Test: If there is a linear relationship between two lists of data
+	H0: There is no linear relationship; rho = 0
+	H1: There is a linear relationship; rho != 0
+	
+	Inputs:
+	data1: a list of numerical data
+	data2: a list of numerical data
+	alpha: significance level
+
+	Outputs:
+	Decision, t-statistic, critical value
+	"""
+	data_len = len(data1)
+	assert data_len == len(data2), 'The length of two lists are not same.'
+	rho = corr(data1, data2)
+	t_stat = rho*sqrt(data_len-1) / sqrt(1-rho*rho)
+	t = stat.t.ppf(1 - alpha/2.0, data_len-2)
+	if tstat > -1*t and tstat < t: return True, tstat, t
+	else: return False, tstat, t
+    
+def linear_regression(x, y, alpha):
+	"""
+	Descriptions:
+	The correlation is tested in the first place.
+	If there is no linear relationship, it is terminated.
+	linear regression y = b0 + b1*x
+	
+	Input:
+	x: a list of numbers 
+	y: a list of numbers
+	alpha: significance level
+	
+	Output:
+	beta1: b1
+	beta0: b0
+	"""
+	assert is_corr(x, y, 0.05)[0] is False, 'These is no linear relationship'
+	sum_x, sum_y = sum(x), sum(y)
+	len_data = len(x)
+	sum_prod_xy = 0
+	sum_xx = 0
+	for i in xrange(len_data):
+		sum_prod_xy += x[i]*y[i]
+		sum_xx += x[i]*x[i]
+	beta1 = (len_data*sum_prod_xy - sum_x*sum_y) / (len_data*sum_xx - sum_x)
+	beta0 = sum_y/len_data - beta1*sum_x/len_data
+	return beta1, beta0
