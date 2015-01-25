@@ -8,3 +8,4 @@ Functionalities:
 * Descriptive statistics
 * Statistical estimations and inferences
 * One-way ANOVA
+* Correlation analysis; Linear regression
