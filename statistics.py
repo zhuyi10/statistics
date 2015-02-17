@@ -13,15 +13,29 @@ Functionalities:
 * Statistical estimations and inferences
 * One-way ANOVA
 * Correlation analysis; Linear regression
+* Multi-variable statistical estimations and inferences
 """
 
+import numpy as np
+import numpy.linalg as la
 import matplotlib.pyplot as plt
 import pandas as pd
 import scipy.stats as stat
-from math import sqrt, ceil, log
+import math
+from math import sqrt, ceil, log, exp
 
+# Critical values for z distribution.
+# The key is alpha. The significant level is 1 - alpha.
+# The value is z-statistics, stat.norm.ppf(1 - alpha)
 Z_ALPHA = {0.005:2.5758, 0.025:1.96, 0.05:1.6449, 0.01:2.3263, 0.05:1.64485, 0.1:1.28155}
-
+# Critical values for t distribution.
+# The key is alpha. The significant level is 1 - alpha.
+# The value is dictionary, in which
+# the key is the degree of freedom, which is 19 < df < 40;
+# the value is t-statistics, stat.t.ppf(1 - alpha, degree_freedom) 
+T_ALPHA = {0.005:[], 0.025:[], 0.05:[], 0.01:[], 0.05:[], 0.1:[]}
+for k, v in T_ALPHA.items():
+    v = [stat.t.ppf(1 - k, i) for i in xrange(19, 41)]
 
 def histplot(data):
     """
@@ -62,37 +76,99 @@ def boxplot(data):
 def mean(data):
     """
     Mean of an array
+    
+    Input:
+    data: a list of numbers
+
+    Output:
+    Mean of the data
+    
+    Example:
+    import random
+    import statistics as s
+    data = random.random(1000)
+    print s.mean(data)
     """    
     return pd.Series(data).mean()
 
 def var(data):
     """
     Variation of an array
-    """
+
+    Input:
+    data: a list of numbers
+
+    Output:
+    Variation of the data
+    
+    Example:
+    import random
+    import statistics as s
+    data = random.random(1000)
+    print s.var(data)
+    """    
     return pd.Series(data).var()
     
 def std(data):
     """
     Standard variation of an array
+    
+    Input:
+    data: a list of numbers
+
+    Output:
+    Standard variation of the data
+    
+    Example:
+    import random
+    import statistics as s
+    data = random.random(1000)
+    print s.std(data)
     """
     return pd.Series(data).std()
 
 def corr(data1, data2):
-	"""
-	Correlation between two lists of data
-	"""
-	return pd.Series(data1).corr(pd.Series(data2))
-	
+    """
+    Correlation between two lists of data
+
+    Input:
+    data1: a list of numbers
+    data2: a list of numbers
+
+    Output:
+    Correlation between data1 & data2
+    
+    Example:
+    import random
+    import statistics as s
+    data1 = random.random(1000)
+    data2 = random.random(1000)
+    print s.corr(data1, data2)
+    """
+    return pd.Series(data1).corr(pd.Series(data2))
+    
 def mean_est_std_known(data, alpha, std):
     """
     Confidence interval of the mean of single random variable
+    * The distribution of the data follows normal distribution.
+    * Otherwise, the sample size len(data) > 30.
     * Standard variation is known.
+    
+    Input:
+    data: a list of numbers
+    alpha: 1-alpha is the significant level
+    std: the standard variation of the data
+
+    Output:
+    The confidence interval
+    
+    Example:
+    import random
+    import statistics as s
+    data = random.random(1000)
+    print str(mean_est_std_known(data, 0.05, 1.0))
     """
-    if alpha/2.0 in Z_ALPHA:
-        z = Z_ALPHA[alpha/2.0]
-    else:
-        z = stat.norm.ppf(1 - alpha/2.0)
-    a = z * std / float(sqrt(len(data)))
+    a = Z_ALPHA.get(alpha/2.0, stat.norm.ppf(1 - alpha/2.0)) * std / float(sqrt(len(data)))
     m = mean(data)
     conf_interval = [m - a, m + a]
     return conf_interval
@@ -100,10 +176,29 @@ def mean_est_std_known(data, alpha, std):
 def mean_est_std_unknown(data, alpha):
     """
     Confidence interval of the mean of single random variable
+    * The distribution of the data follows normal distribution.
     * Standard variation is unknown.
+    
+    Input:
+    data: a list of numbers
+    alpha: 1-alpha is the significant level
+
+    Output:
+    The confidence interval
+    
+    Example:
+    import random
+    import statistics as s
+    data = random.random(1000)
+    print str(mean_est_std_unknown(data, 0.05))
     """
     len_data = len(data)
-    tp = stat.t.ppf(1 - alpha/2.0, len_data-1)
+    sl, df = 1 - alpha/2.0, len_data - 1
+    if sl in T_ALPHA:
+        if df in T_ALPHA[sl]:
+            tp = T_ALPHA[sl][df]
+    else:
+        tp = stat.t.ppf(sl, df)
     a = tp * std(data) / float(sqrt(len_data))
     m = mean(data)
     conf_interval = [m - a, m + a]
@@ -112,25 +207,63 @@ def mean_est_std_unknown(data, alpha):
 def mean_diff_est_std_known(data1, data2, std1, std2, alpha):
     """
     Confidence interval of the difference of two means of two random variables
+    * Two random variables are independent.
+    * The distribution of the data follows normal distribution.
+    * Otherwise, the sample size len(data) > 30.
     * Standard variations are known.
+    
+    Input:
+    data1: a list of numbers
+    data2: a list of numbers
+    alpha: 1-alpha is the significant level
+    std1: the standard variation of data1
+    std2: the standard variation of data1
+
+    Output:
+    The confidence interval
+    
+    Example:
+    import random
+    import statistics as s
+    data1 = random.random(1000)
+    data2 = random.random(1000)
+    print str(mean_diff_est_std_known(data1, data2, 1.0, 1.0, 0.05))
     """
     diff = abs(mean(data1) - mean(data2))
-    if alpha/2.0 in Z_ALPHA:
-        z = Z_ALPHA[alpha/2.0]
-    else:
-        z = stat.norm.ppf(1 - alpha/2.0)
-    a = z * sqrt(std1/float(len(data1)) + std2/float(len(data2)))
+    a = Z_ALPHA.get(alpha/2.0, stat.norm.ppf(1 - alpha/2.0)) * sqrt(std1/float(len(data1)) + std2/float(len(data2)))
     conf_interval = [diff - a, diff + a]
     return conf_interval
 
 def mean_diff_est_std_equal_unknown(data1, data2, alpha):
     """
     Confidence interval of the difference of two means of two random variables
+    * Two random variables are independent.
+    * The distribution of the data follows normal distribution.
     * Standard variations are equal but unknown.
+    
+    Input:
+    data1: a list of numbers
+    data2: a list of numbers
+    alpha: 1-alpha is the significant level
+
+    Output:
+    The confidence interval
+    
+    Example:
+    import random
+    import statistics as s
+    data1 = random.random(1000)
+    data2 = random.random(1000)
+    print str(mean_diff_est_std_equal_unknown(data1, data2, 0.05))
     """
     diff = abs(mean(data1) - mean(data2))
     len1, len2 = len(data1), len(data2)
-    tp = stat.t.ppf(1 - alpha/2.0, len1 + len2 - 2)
+    sl, df = 1 - alpha/2.0, len1 + len2 - 2
+    if sl in T_ALPHA:
+        if df in T_ALPHA[sl]:
+            tp = T_ALPHA[sl][df]
+    else:
+        tp = stat.t.ppf(sl, df)
     s = sqrt(((len1 - 1)*var(data1) + (len2 - 1)*var(data2)) / (len1 + len2 - 2))
     a = tp * s * sqrt(1.0/len1 + 1.0/len2)
     conf_interval = [diff - a, diff + a]
@@ -139,13 +272,35 @@ def mean_diff_est_std_equal_unknown(data1, data2, alpha):
 def mean_diff_est_std_unequal_unknown(data1, data2, alpha):
     """
     Confidence interval of the difference of two means of two random variables
-    * Standard variations are unequal but unknown.
+    * Two random variables are independent.
+    * The distribution of the data follows normal distribution.
+    * Standard variations are unequal and unknown.
+    
+    Input:
+    data1: a list of numbers
+    data2: a list of numbers
+    alpha: 1-alpha is the significant level
+
+    Output:
+    The confidence interval
+    
+    Example:
+    import random
+    import statistics as s
+    data1 = random.random(1000)
+    data2 = random.random(1000)
+    print str(mean_diff_est_std_unequal_unknown(data1, data2, 0.05))
     """
     diff = abs(mean(data1) - mean(data2))
     len1, len2 = len(data1), len(data2)
     var1, var2 = var(data1), var(data2)
+    sl = 1 - alpha/2.0
     df = (var1/len1 + var2/len2)*(var1/len1 + var2/len2) / ((var1*var1/len1/len1)/(len1-1) + (var2*var2/len2/len2)/(len2-1))
-    tp = stat.t.ppf(1 - alpha/2.0, df)
+    if sl in T_ALPHA:
+        if df in T_ALPHA[sl]:
+            tp = T_ALPHA[sl][df]
+    else:
+        tp = stat.t.ppf(sl, df)
     s = sqrt(((len1 - 1)*var(data1) + (len2 - 1)*var(data2)) / (len1 + len2 - 2))
     a = tp * s * sqrt(1.0/len1 + 1.0/len2)
     conf_interval = [diff - a, diff + a]
@@ -342,52 +497,328 @@ def oneway_anova(data, alpha):
     else: return False, fstat, f
 
 def is_corr(data1, data2, alpha):
-	"""
-	Descriptions:
-	Hypothesis Test: If there is a linear relationship between two lists of data
-	H0: There is no linear relationship; rho = 0
-	H1: There is a linear relationship; rho != 0
-	
-	Inputs:
-	data1: a list of numerical data
-	data2: a list of numerical data
-	alpha: significance level
+    """
+    Descriptions:
+    Hypothesis Test: If there is a linear relationship between two lists of data
+    H0: There is no linear relationship; rho = 0
+    H1: There is a linear relationship; rho != 0
+    
+    Inputs:
+    data1: a list of numerical data
+    data2: a list of numerical data
+    alpha: significance level
 
-	Outputs:
-	Decision, t-statistic, critical value
-	"""
-	data_len = len(data1)
-	assert data_len == len(data2), 'The length of two lists are not same.'
-	rho = corr(data1, data2)
-	t_stat = rho*sqrt(data_len-1) / sqrt(1-rho*rho)
-	t = stat.t.ppf(1 - alpha/2.0, data_len-2)
-	if tstat > -1*t and tstat < t: return True, tstat, t
-	else: return False, tstat, t
+    Outputs:
+    Decision, t-statistic, critical value
+    """
+    data_len = len(data1)
+    assert data_len == len(data2), 'The length of two lists are not same.'
+    rho = corr(data1, data2)
+    t_stat = rho*sqrt(data_len-1) / sqrt(1-rho*rho)
+    t = stat.t.ppf(1 - alpha/2.0, data_len-2)
+    if tstat > -1*t and tstat < t: return True, tstat, t
+    else: return False, tstat, t
     
 def linear_regression(x, y, alpha):
-	"""
-	Descriptions:
-	The correlation is tested in the first place.
-	If there is no linear relationship, it is terminated.
-	linear regression y = b0 + b1*x
-	
-	Input:
-	x: a list of numbers 
-	y: a list of numbers
-	alpha: significance level
-	
-	Output:
-	beta1: b1
-	beta0: b0
-	"""
-	assert is_corr(x, y, 0.05)[0] is False, 'These is no linear relationship'
-	sum_x, sum_y = sum(x), sum(y)
-	len_data = len(x)
-	sum_prod_xy = 0
-	sum_xx = 0
-	for i in xrange(len_data):
-		sum_prod_xy += x[i]*y[i]
-		sum_xx += x[i]*x[i]
-	beta1 = (len_data*sum_prod_xy - sum_x*sum_y) / (len_data*sum_xx - sum_x)
-	beta0 = sum_y/len_data - beta1*sum_x/len_data
-	return beta1, beta0
+    """
+    Descriptions:
+    The correlation is tested in the first place.
+    If there is no linear relationship, it is terminated.
+    linear regression y = b0 + b1*x
+    
+    Input:
+    x: a list of numbers 
+    y: a list of numbers
+    alpha: significance level
+    
+    Output:
+    beta1: b1
+    beta0: b0
+    """
+    assert is_corr(x, y, 0.05)[0] is False, 'These is no linear relationship'
+    sum_x, sum_y = sum(x), sum(y)
+    len_data = len(x)
+    sum_prod_xy = 0
+    sum_xx = 0
+    for i in xrange(len_data):
+        sum_prod_xy += x[i]*y[i]
+        sum_xx += x[i]*x[i]
+    beta1 = (len_data*sum_prod_xy - sum_x*sum_y) / (len_data*sum_xx - sum_x)
+    beta0 = sum_y/len_data - beta1*sum_x/len_data
+    return beta1, beta0
+
+def multi_mean(data):
+    """
+    The vector of means of multiple random variables
+    
+    Input:
+    data: n-by-p matrix contains n samples with p features
+    
+    Output:
+    1-by-p vector of means
+    """
+    return np.mean(data, axis=0)
+
+def multi_cov(data):
+    """
+    Covariance matrix of multiple random variables
+    
+    Input:
+    data: n-by-p matrix contains n samples with p features
+    
+    Output:
+    p-by-p covariance matrix
+    """    
+    return np.cov(data, rowvar=0)
+    
+def multi_corr(data):
+    """
+    Correlation coefficients matrix of multiple random variables
+    
+    Input:
+    data: n-by-p matrix contains n samples with p features
+    
+    Output:
+    p-by-p correlation coefficients matrix
+    """    
+    c = np.cov(data, rowvar=0)
+    h, w = len(c), len(c[0])
+    for i in xrange(h):
+        r.append = []
+        cii = c[i][i]
+        for j in xrange(w):
+            r[i].append(c[i][j]/sqrt(cii)/sqrt(c[j][j]))
+    return r
+
+def single_multi_meandiff_infer_cov_know(data, cov, mu, alpha):
+    """
+    Double side inference of the mean of a data set
+
+    * The data set is from multi-variable normal distribution.
+    * Covariance matrix is known.
+    
+    Input:
+    data: n-by-p matrix contains n samples with p features
+    
+    Output:
+    decision: True means the mean equals to mu.
+    chi_stat: chi-square statistic
+    c_val: critical value
+    """
+    n, p = float(len(data)), float(len(data[0]))
+    mean_diff = multi_mean(data) - np.array(mu)
+    chi_stat = n*la.dot(la.dot(np.transpose(diff_mean), la.inv(cov)), diff_mean)
+    c_val = stat.chi2.ppf(alpha, p)
+    if chi_stat < c_val:
+        return True, chi_stat, c_val
+    else:
+        return False, chi_stat, c_val
+
+def single_multi_meandiff_infer_cov_unknow(data, mu, alpha):
+    """
+    Double side inference of the mean of a data set
+
+    * The data set is from multi-variable normal distribution.
+    * Covariance matrix is unknown.
+    
+    Input:
+    data: n-by-p matrix contains n samples with p features
+    mu: In H0, the mean of a data set equals to mu
+    alpha: significant level
+    
+    Output:
+    decision: True means the mean equals to mu.
+    chi_stat: chi-square statistic
+    c_val: critical value
+    """
+    n, p = float(len(data)), float(len(data[0]))
+    mean_diff = multi_mean(data) - np.array(mu)
+    f_stat = (n-p)/p*la.dot(la.dot(sqrt(n)*np.transpose(diff_mean), la.inv(multi_cov)), sqrt(n)*diff_mean)
+    c_val = stat.f.ppf(alpha, p, n-p)
+    if f_stat < c_val:
+        return True, f_stat, c_val
+    else:
+        return False, f_stat, c_val
+
+def double_multi_meandiff_infer_equal_cov_known(data1, data2, cov, alpha):
+    """
+    Double side inference of the two means of two data sets
+
+    * Two data sets are from two multi-variable normal distributions
+    * Covariance matrix are known and identical
+    
+    Input:
+    data1: n-by-p matrix contains n samples with p features
+    data2: m-by-p matrix contains n samples with p features
+    cov: the covariance matrix
+    alpha: significant level
+    
+    Output:
+    decision: True means the two means are the same.
+    chi_stat: chi-square statistic
+    c_val: critical value
+    """        
+    diff_mean = multi_mean(data1) - multi_mean(data2)
+    n, m, p = float(len(data1)), float(len(data2)), float(len(data1[0]))
+    chi_stat = n*m/(n+m)*la.dot(la.dot(np.transpose(diff_mean), la.inv(cov)), diff_mean)
+    c_val = stat.chi2.ppf(alpha, p)
+    if chi_stat < c_val:
+        return True, chi_stat, c_val
+    else:
+        return False, chi_stat, c_val
+        
+def double_multi_meandiff_infer_equal_cov_unknown(data1, data2, alpha):
+    """
+    Double side inference of the two means of two data sets
+
+    * Two data sets are from two multi-variable normal distributions
+    * Covariance matrix are unknown and identical
+    
+    Input:
+    data1: n-by-p matrix contains n samples with p features
+    data2: m-by-p matrix contains n samples with p features
+    alpha: significant level
+
+    Output:
+    decision: True means the two means are the same.
+    f_stat: chi-square statistic
+    c_val: critical value
+    """        
+    diff_mean = multi_mean(data1) - multi_mean(data2)
+    n, m, p = float(len(data1)), float(len(data2)), float(len(data1[0]))
+    a = sqrt(n*m/(n+m))
+    f_stat = (n+m-p-1)/p*la.dot(a*la.dot(np.transpose(diff_mean), la.inv(multi_cov(data1)+multi_cov(data2))), a*diff_mean)
+    c_val = stat.f.ppf(alpha, p, n+m-p-1)
+    if f_stat < c_val:
+        return True, f_stat, c_val
+    else:
+        return False, f_stat, c_val
+
+def double_multi_meandiff_infer_diff_cov_equal_size(data1, data2, alpha):
+    """
+    Double side inference of the two means of two data sets
+
+    * Two data sets are from two multi-variable normal distributions.
+    * Covariance matrix are unknown and different.
+    * The size of data sets are the same.
+    
+    Input:
+    data1: n-by-p matrix contains n samples with p features
+    data2: n-by-p matrix contains n samples with p features
+    alpha: significant level
+    
+    Output:
+    decision: True means the two means are the same.
+    f_stat: chi-square statistic
+    c_val: critical value
+    """        
+    n, p = float(len(data1)), float(len(data1[0]))
+    diff_mean = multi_mean(data1) - multi_mean(data2)
+    z = []
+    for i in xrange(n):
+        z.append([data1[i][j]-data2[i][j] for j in xrange(p)])
+    z = np.array(z)
+    s = np.array()
+    for i in xrange(n):
+        s = la.dot(z[i]-diff_mean, np.transpose(z[i]-diff_mean))
+    f_stat = (n-p)*n/p*la.dot(la.dot(np.transpose(diff_mean), la.inv(s)), diff_mean)
+    c_val = stat.f.ppf(alpha, p, n-p)
+    if f_stat < c_val:
+        return True, f_stat, c_val
+    else:
+        return False, f_stat, c_val
+        
+def double_multi_meandiff_infer_diff_cov_diff_size(data1, data2, alpha):
+    """
+    Double side inference of the two means of two data sets
+
+    * Two data sets are from two multi-variable normal distributions.
+    * Covariance matrix are unknown and different.
+    * The size of data1 is smaller than that of data2.
+    
+    Input:
+    data1: n-by-p matrix contains n samples with p features
+    data2: m-by-p matrix contains n samples with p features
+    alpha: significant level
+
+    Output:
+    decision: True means the two means are the same.
+    f_stat: chi-square statistic
+    c_val: critical value
+    """        
+    n, m, p = len(data1), len(data2), len(data1[0])
+    diff_mean = multi_mean(data1) - multi_mean(data2)
+    z = []
+    a, b = [0]*n, [0]*m
+    for i in xrange(n):
+        for j in xrange(p):
+            a[j] += data2[i][j]
+    c = 1/sqrt(n*m)
+    a = [i*c for i in a]
+    for i in xrange(m):
+        for j in xrange(p):
+            b[j] += data2[i][j]
+    c = 1/m
+    b = [i*c for i in b]
+    for i in xrange(n):
+        z.append([data1[i][j]-sqrt(n/m)*data2[i][j]+a-b for j in xrange(p)])
+    z = np.array(z)
+    s = np.array()
+    for i in xrange(n):
+        s = la.dot(z[i]-diff_mean, np.transpose(z[i]-diff_mean))
+    f_stat = (n-p)*n/p*la.dot(la.dot(np.transpose(diff_mean), la.inv(s)), diff_mean)
+    c_val = stat.f.ppf(alpha, p, n-p)
+    if f_stat < c_val:
+        return True, f_stat, c_val
+    else:
+        return False, f_stat, c_val
+
+def multi_independent_infer(data, alpha):
+    """
+    Independent inference of multiple random variables
+
+    * The data follows p-dimensional normal distribution.
+    
+    Input:
+    data: n-by-p matrix contains n samples with p features
+    alpha: significant level
+
+    Output:
+    decision: True means they are independent
+    chi_stat: chi-square statistic
+    c_val: critical value
+    """        
+    n, p, mean_data = len(data), len(data[0]), multi_mean(data)
+    s = np.zeros((p, p))
+    for i in xrange(n):
+        s += np.dot(data[i]-mean_data, np.transpose(data[i]-mean_data))
+    chi_stat = -2*log(exp(-1.5*np.trace(s))*pow(np.linalg.det(s), n/2)*pow(math.e/n, n*p/2))
+    c_val = stat.chi2.ppf(alpha, p*(p+1)/2)
+    if chi_stat < c_val:
+        return True, chi_stat, c_val
+    else:
+        return False, chi_stat, c_val
+        
+def multi_cov_infer(data, sigma, alpha):
+    """
+    Covariance matrix inference of multiple random variables
+
+    * The data follows p-dimensional normal distribution.
+    
+    Input:
+    data: n-by-p matrix contains n samples with p features
+    sigma: a covariance matrix
+    alpha: significant level
+
+    Output:
+    decision: True means the data's covariance matrix equals to sigma
+    chi_stat: chi-square statistic
+    c_val: critical value
+    """        
+    n, p = len(data), len(data[0])
+    d = la.inv(la.cholesky(data))
+    y = []
+    for i in xrange(n):
+        y.append(la.dot(d, a[i]))
+    return multi_independent_infer(y, alpha)
+    

@@ -9,3 +9,4 @@ Functionalities:
 * Statistical estimations and inferences
 * One-way ANOVA
 * Correlation analysis; Linear regression
+* Multi-variable statistical estimations and inferences
