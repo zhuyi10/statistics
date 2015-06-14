@@ -37,6 +37,31 @@ T_ALPHA = {0.005:[], 0.025:[], 0.05:[], 0.01:[], 0.05:[], 0.1:[]}
 for k, v in T_ALPHA.items():
     v = [stat.t.ppf(1 - k, i) for i in xrange(19, 41)]
 
+def create_discrete_distribution(values, probabilities):
+    """
+    Create a distriubtion of discrete random variable
+    
+    Input:
+    values: a list of ordered values of a discrete random variable
+    probabilities: a list of probabilities of the ordered values
+    
+    Output:
+    dist: a dictionary that represents the probability density distribution
+    
+    Example:
+    import random
+    values = range(10)
+    probabilities = [random.random for i in xrange(10)]
+    sp = sum(probabilities)
+    probabilities = [p/sp for p in probabilities]
+    dist = create_discrete_distribution(values, probabilities)
+    """
+    assert len(values) == len(probabilities), 'The lengths of values and probabilities do not match.'
+    dist = dict()
+    for v, p in values, probabilities:
+        dist[v] = p
+    return dist
+
 def histplot(data):
     """
     Histogram plot
@@ -156,7 +181,7 @@ def mean_est_std_known(data, alpha, std):
     
     Input:
     data: a list of numbers
-    alpha: 1-alpha is the significant level
+    alpha: significant level
     std: the standard variation of the data
 
     Output:
@@ -181,7 +206,7 @@ def mean_est_std_unknown(data, alpha):
     
     Input:
     data: a list of numbers
-    alpha: 1-alpha is the significant level
+    alpha: the significant level
 
     Output:
     The confidence interval
@@ -215,7 +240,7 @@ def mean_diff_est_std_known(data1, data2, std1, std2, alpha):
     Input:
     data1: a list of numbers
     data2: a list of numbers
-    alpha: 1-alpha is the significant level
+    alpha: significant level
     std1: the standard variation of data1
     std2: the standard variation of data1
 
@@ -244,7 +269,7 @@ def mean_diff_est_std_equal_unknown(data1, data2, alpha):
     Input:
     data1: a list of numbers
     data2: a list of numbers
-    alpha: 1-alpha is the significant level
+    alpha: significant level
 
     Output:
     The confidence interval
@@ -279,7 +304,7 @@ def mean_diff_est_std_unequal_unknown(data1, data2, alpha):
     Input:
     data1: a list of numbers
     data2: a list of numbers
-    alpha: 1-alpha is the significant level
+    alpha: significant level
 
     Output:
     The confidence interval
@@ -309,6 +334,20 @@ def mean_diff_est_std_unequal_unknown(data1, data2, alpha):
 def var_est(data, alpha):
     """
     Confidence interval of the variation of single random variable
+
+    Input:
+    data: a list of numbers
+    alpha: significant level
+
+    Output:
+    conf_interval: confidence interval
+    
+    Example:
+
+    import random
+    import statistics as s
+    data = random.random(1000)
+    print str(var_est(data, 0.05))
     """
     len_data = len(data)
     a = var(data) * (len_data - 1)
@@ -534,8 +573,12 @@ def linear_regression(x, y, alpha):
     Output:
     beta1: b1
     beta0: b0
+    r2: r square value
+    f_stat: f statistics
+    f: critical value
     """
     assert is_corr(x, y, 0.05)[0] is False, 'These is no linear relationship'
+    # solve linear regression
     sum_x, sum_y = sum(x), sum(y)
     len_data = len(x)
     sum_prod_xy = 0
@@ -545,7 +588,16 @@ def linear_regression(x, y, alpha):
         sum_xx += x[i]*x[i]
     beta1 = (len_data*sum_prod_xy - sum_x*sum_y) / (len_data*sum_xx - sum_x)
     beta0 = sum_y/len_data - beta1*sum_x/len_data
-    return beta1, beta0
+    # evaluate linear regression
+    est_y = [x0*beta1 + beta0 for x0 in x]
+    mean_y = mean(y)
+    sst = sum([(y[i] - mean_y) * (y[i] - mean_y) for i in xrange(len_data)])
+    ssr = sum([(est_y[i] - mean_y) * (est_y[i] - mean_y) for i in xrange(len_data)])
+    sst = sum([(y[i] - est_y[i]) * (y[i] - est_y[i]) for i in xrange(len_data)])
+    r2 = ssr / sst
+    f_stat = ssr * (len_data - 2) / sse
+    f = stat.f.ppf(1 - alpha, 1, len_data - 2)
+    return beta1, beta0, r2, f_stat, f
 
 def multi_mean(data):
     """
