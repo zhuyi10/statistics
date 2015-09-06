@@ -37,6 +37,7 @@ T_ALPHA = {0.005:[], 0.025:[], 0.05:[], 0.01:[], 0.05:[], 0.1:[]}
 for k, v in T_ALPHA.items():
     v = [stat.t.ppf(1 - k, i) for i in xrange(19, 41)]
 
+
 def create_discrete_distribution(values, probabilities):
     """
     Create a distriubtion of discrete random variable
@@ -61,6 +62,7 @@ def create_discrete_distribution(values, probabilities):
     for v, p in values, probabilities:
         dist[v] = p
     return dist
+
 
 def histplot(data):
     """
@@ -97,7 +99,8 @@ def boxplot(data):
     s.boxplot(random.random(1000))
     """  
     plt.box(data)
-    
+
+
 def mean(data):
     """
     Mean of an array
@@ -116,6 +119,7 @@ def mean(data):
     """    
     return pd.Series(data).mean()
 
+
 def var(data):
     """
     Variation of an array
@@ -133,6 +137,7 @@ def var(data):
     print s.var(data)
     """    
     return pd.Series(data).var()
+
     
 def std(data):
     """
@@ -151,6 +156,7 @@ def std(data):
     print s.std(data)
     """
     return pd.Series(data).std()
+
 
 def corr(data1, data2):
     """
@@ -171,6 +177,7 @@ def corr(data1, data2):
     print s.corr(data1, data2)
     """
     return pd.Series(data1).corr(pd.Series(data2))
+
     
 def mean_est_std_known(data, alpha, std):
     """
@@ -197,6 +204,7 @@ def mean_est_std_known(data, alpha, std):
     m = mean(data)
     conf_interval = [m - a, m + a]
     return conf_interval
+
     
 def mean_est_std_unknown(data, alpha):
     """
@@ -229,6 +237,7 @@ def mean_est_std_unknown(data, alpha):
     conf_interval = [m - a, m + a]
     return conf_interval
 
+
 def mean_diff_est_std_known(data1, data2, std1, std2, alpha):
     """
     Confidence interval of the difference of two means of two random variables
@@ -258,6 +267,7 @@ def mean_diff_est_std_known(data1, data2, std1, std2, alpha):
     a = Z_ALPHA.get(alpha/2.0, stat.norm.ppf(1 - alpha/2.0)) * sqrt(std1/float(len(data1)) + std2/float(len(data2)))
     conf_interval = [diff - a, diff + a]
     return conf_interval
+
 
 def mean_diff_est_std_equal_unknown(data1, data2, alpha):
     """
@@ -293,6 +303,7 @@ def mean_diff_est_std_equal_unknown(data1, data2, alpha):
     a = tp * s * sqrt(1.0/len1 + 1.0/len2)
     conf_interval = [diff - a, diff + a]
     return conf_interval
+
 
 def mean_diff_est_std_unequal_unknown(data1, data2, alpha):
     """
@@ -331,6 +342,7 @@ def mean_diff_est_std_unequal_unknown(data1, data2, alpha):
     conf_interval = [diff - a, diff + a]
     return conf_interval
 
+
 def var_est(data, alpha):
     """
     Confidence interval of the variation of single random variable
@@ -343,7 +355,6 @@ def var_est(data, alpha):
     conf_interval: confidence interval
     
     Example:
-
     import random
     import statistics as s
     data = random.random(1000)
@@ -354,14 +365,31 @@ def var_est(data, alpha):
     conf_interval = [a / stat.chi2.ppf(1 - alpha/2.0, len_data - 1), a / stat.chi2.ppf(alpha/2.0, len_data - 1)]
     return conf_interval
 
+
 def var_ratio_est(data1, data2, alpha):
     """
     Confidence interval of the ratio of two variations of two random variables
+
+    Input:
+    data1: a list of numbers
+    data2: a list of numbers
+    alpha: significant level
+
+    Output:
+    conf_interval: confidence interval
+    
+    Example:
+    import random
+    import statistics as s
+    data1 = random.random(1000)
+    data2 = [random.random()+1 for i in xrange(1000)]
+    print str(var_ratio_est(data1, data2, 0.05))
     """
     len1, len2 = len(data1), len(data2)
     a = var(data1) / var(data2)
     conf_interval = [a / stat.f.ppf(1 - alpha/2.0, len1 - 1, len2 - 1), a / stat.f.ppf(alpha/2.0, len1 - 1, len2 - 1)]
     return conf_interval
+
 
 def mean_infer_doubleside_std_known(mu0, data, alpha, std):
     """
@@ -873,4 +901,23 @@ def multi_cov_infer(data, sigma, alpha):
     for i in xrange(n):
         y.append(la.dot(d, a[i]))
     return multi_independent_infer(y, alpha)
+
     
+def mahalanobis_dist(u, v, c, sqrt=True):
+    """
+    Mahalanobis distance between two vectors.
+    
+    Input:
+    u: a vector
+    v: a vector
+    c: covariance matrix
+    
+    Output:
+    dist: Mahalanobis distance
+    """
+    u = np.array(u)
+    v = np.array(v)
+    c = np.array(c)
+    diff = u - v
+    m = np.dot(np.dot(diff, c), diff)
+    return np.sqrt(m) if sqrt else m  
