@@ -14,8 +14,10 @@ Functionalities:
 * One-way ANOVA
 * Correlation analysis; Linear regression
 * Multi-variable statistical estimations and inferences
+* Discriminant analysis
 """
 
+import sys
 import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as plt
@@ -920,4 +922,36 @@ def mahalanobis_dist(u, v, c, sqrt=True):
     c = np.array(c)
     diff = u - v
     m = np.dot(np.dot(diff, c), diff)
-    return np.sqrt(m) if sqrt else m  
+    return np.sqrt(m) if sqrt else m
+
+
+def bayesian_discriminant(data, means, priors, costs, cum_funcs):
+    """
+    Bayesian discriminant analysis
+
+    Input:
+    data: a sample data to be discriminanted
+    means: list of means of each class
+    prior: list of prior probabilities of each class
+    costs: matrix of costs of failures
+    cum_funcs: list of cumulative probability functions of each class
+
+    Output:
+    The class this data belongs to
+    """
+    rs = 0
+    num_class = len(priors)
+    assert num_class == len(costs) and num_class == len(cum_funcs),
+           'The length of input lists dose not equal to the number of class'
+    min_cost = sys.float_info.max
+    for i in xrange(num_class):
+        tmp_cost = 0
+        for j in xrange(num_class):
+            if means[j] < means[i]:
+                tmp_cost += priors[j] * costs[i][j] * (1 - cum_funcs[j](data))
+            else:
+                tmp_cost += priors[j] * costs[i][j] * cum_funcs[j](data)
+        if tmp_cost < min_cost:
+            min_cost = tmp_cost
+            rs = i
+    return rs
