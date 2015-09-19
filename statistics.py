@@ -397,6 +397,21 @@ def mean_infer_doubleside_std_known(mu0, data, alpha, std):
     """
     Double side inference of the mean of single random variable
     * Standard variation is known.
+
+    Input:
+    mu0: infer if the sample data is from a distribution with mean equals to mu0
+    data: a sample data
+    alpha: significant level
+    std: standard variation
+
+    Output:
+    decision: Ture, if it equals to mu0; otherwise False
+
+    Example:
+    import random
+    import statistics as s
+    data = random.random(1000)
+    print mean_infer_doubleside_std_known(1.0, data, 0.05, 1)
     """
     if alpha/2.0 in Z_ALPHA:
         z = Z_ALPHA[alpha/2.0]
@@ -410,6 +425,22 @@ def mean_infer_singleside_std_known(mu0, ge, data, alpha, std):
     """
     Single side inference of the mean of single random variable
     * Standard variation is known.
+
+    Input:
+    mu0: infer if the sample data is from a distribution with mean greater/smaller than mu0
+    ge: True means greater; False means smaller
+    data: a sample data
+    alpha: significant level
+    std: standard variation
+
+    Output:
+    decision: the hypothesis is Ture/False
+
+    Example:
+    import random
+    import statistics as s
+    data = random.random(1000)
+    print mean_infer_doubleside_std_known(1.0, True, data, 0.05, 1)
     """
     if alpha/2.0 in Z_ALPHA:
         z = Z_ALPHA[alpha/2.0]
@@ -955,3 +986,31 @@ def bayesian_discriminant(data, means, priors, costs, cum_funcs):
             min_cost = tmp_cost
             rs = i
     return rs
+
+
+def fisher_discriminant_vector(data, means, covs):
+    """
+    Fisher discriminant analysis
+
+    Input:
+    data: a sample data to be discriminanted
+    means: list of means of each class
+    covs: list of covariance matrixes
+
+    Output:
+    The vector used for discriminant
+    """
+    num_p = len(data)
+    assert num_p == len(means[0]) and num_p == len(covs[0][0])
+    sum_cov = np.sum(np.array(covs), 0)
+    inv_sum_cov = la.inv(sum_cov)
+    mt = numpy.eye(num_p) - (1 / num_p) * numpy.ones((num_p, num_p))
+    mb = np.dot((np.dot(np.transpose(np.array(means)), mt), np.array(means))
+    eig_val, eig_vec = numpy.linalg.eig(np.dot(inv_sum_cov, mb))
+    max_val = sys.float_info.min
+    max_ind = 0
+    for i, v in enumerate(eig_val):
+        if v > max_val:
+            max_val = v
+            max_ind = i
+    return eig_vec[:, max_ind]
