@@ -1,7 +1,7 @@
 r"""
 Data Analysis Library
 
-Description:
+Descriptions:
 This is a data analysis tool for basic statistics data analysis. 
 
 Prerequisites:
@@ -30,6 +30,7 @@ from math import sqrt, ceil, log, exp
 # The key is alpha. The significant level is 1 - alpha.
 # The value is z-statistics, stat.norm.ppf(1 - alpha)
 Z_ALPHA = {0.005:2.5758, 0.025:1.96, 0.05:1.6449, 0.01:2.3263, 0.05:1.64485, 0.1:1.28155}
+
 # Critical values for t distribution.
 # The key is alpha. The significant level is 1 - alpha.
 # The value is dictionary, in which
@@ -42,7 +43,7 @@ for k, v in T_ALPHA.items():
 
 def create_discrete_distribution(values, probabilities):
     """
-    Create a distriubtion of discrete random variable
+    Create a possibility distribution of discrete random variable.
     
     Input:
     values: a list of ordered values of a discrete random variable
@@ -54,37 +55,40 @@ def create_discrete_distribution(values, probabilities):
     Example:
     import random
     values = range(10)
-    probabilities = [random.random for i in xrange(10)]
+    probabilities = [random.random() for i in range(10)]
     sp = sum(probabilities)
     probabilities = [p/sp for p in probabilities]
     dist = create_discrete_distribution(values, probabilities)
     """
-    assert len(values) == len(probabilities), 'The lengths of values and probabilities do not match.'
+    assert len(values) == len(probabilities), 'The lengths of values dose not match the lengths of probabilities.'
     dist = dict()
-    for v, p in values, probabilities:
+    for v, p in zip(values, probabilities):
         dist[v] = p
     return dist
 
 
-def histplot(data):
+def plot_hist(data, show=True):
     """
-    Histogram plot
-    
-    Input:
-    data: a list of numbers
-    
-    Output:
-    Histogram plot of the data
-    
-    Example:
-    import random
-    import statistics as s
-    s.histplot(random.random(1000))
-    """
-    bins = ceil(1 + log(len(data))/0.693)
-    plt.hist(data, bins)
+    Plot histogram.
 
- 
+    Args:
+        data: a list of numbers
+        show: if True, show the plot; if False, return the data
+    Returns:
+        hist_data or None
+    Example:
+        import random
+        import statistics as s
+        data = s.histogram([random.random for i in xrange(1000)])
+        s.plot_hist(data)
+    """
+    hist_data = plt.hist(data)
+    if show:
+        plt.show()
+    else:
+        return hist_data
+
+
 def boxplot(data):
     """
     Box plot
